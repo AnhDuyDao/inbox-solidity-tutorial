@@ -2,11 +2,12 @@ const assert = require('assert');
 const ganache = require('ganache');
 const { Web3 } = require('web3');
 
-const web3 = new Web3(ganache.provider());
+const web3 = new Web3(ganache.provider({ quiet: true }));
 const { interface, bytecode } = require('../compile');
 
 let accounts;
 let inbox;
+const INIIAL_MESSAGE = 'Hi there!';
 
 beforeEach(async () => {
    // Get a list of all accounts from Ganache
@@ -15,7 +16,7 @@ beforeEach(async () => {
    inbox = await new web3.eth.Contract(JSON.parse(interface))
       .deploy({
          data: bytecode,
-         arguments: ['Hi there!'],
+         arguments: [INIIAL_MESSAGE],
       })
       .send({
          from: accounts[0],
@@ -25,6 +26,17 @@ beforeEach(async () => {
 
 describe('Inbox', () => {
    it('deploys a contract', () => {
-      console.log(inbox);
+      assert.ok(inbox.options.address);
+   });
+   it('has a default message', async () => {
+      const message = await inbox.methods.message().call();
+      assert.equal(message, INIIAL_MESSAGE);
+   });
+   it('can change the message', async () => {
+      await inbox.methods.setMessage('Bye there!').send({
+         from: accounts[0],
+      });
+      const message = await inbox.methods.message().call();
+      assert.equal(message, 'Bye there!');
    });
 });
